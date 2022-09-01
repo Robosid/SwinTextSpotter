@@ -6,7 +6,8 @@ import os
 import time
 import cv2
 import tqdm
-
+from threading import Thread
+import numpy as np
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import read_image
 from detectron2.utils.logger import setup_logger
@@ -16,6 +17,56 @@ from predictor import VisualizationDemo
 
 # constants
 WINDOW_NAME = "COCO detections"
+
+
+class ThreadedCamera(object):
+    def __init__(self, src=""):   #if a new object is made, this --init-- is executed once
+        self.capture = cv2.VideoCapture(src)   #cv2.VideoCapture object (has a method "read") . the argument is "src" (this is the address)
+        self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+        # FPS = 1/X
+        # X = desired FPS
+        self.FPS = 1 / 1000
+        self.FPS_Display = 50 #frequency for display on laptop
+
+        # Start frame retrieval thread
+        self.thread = Thread(target=self.update, args=())  #we make a new thread
+        self.thread.daemon = True     #daemon: runs in the background
+        self.thread.start()       #starts the thread and calls self.update
+        self.frame_time_pre = time.time()
+        self.frame_time_post = time.time()
+        self.center = (0, 0)
+        self.pitch = 0
+        self.pan = 0
+        self.tag_detected = False
+
+    def update(self):   #the self.update ,  this loop performs the querries on the server
+        i = 0  #couner
+        k = 0  #image frame number
+        while True:   #runs the whole time
+            if self.capture.isOpened():
+                buffer_time = time.time()
+                (self.status, self.frame) = self.capture.read()   #in self.status and .frame the results are stored
+                self.frame_time_pre = buffer_time
+                self.frame_time_post = time.time()
+                j = i % 30  # should count from zero to 9 all the times
+                if j == 1:
+                   # cv2.imwrite('Frame' + str(k) + '.jpg', self.frame)
+                    k += 1
+                   # print(f"image {k} stored")
+                i += 1
+            # time.sleep(self.FPS)
+
+    def show_frame(self):
+        #self.add_aruco_tag()
+        cv2.imshow('frame', self.frame)
+
+        #print(self.frame.nbytes)
+        #print(f"T_prev: {round(self.frame_time_pre,3)}, "
+        #      f"Delta_post: {round(self.frame_time_post-self.frame_time_pre,3)},"
+        #      f" Delta_cur: {round(time.time()-self.frame_time_pre,3)}"
+        #      f" Delta_cur+sampling: {round(time.time()-self.frame_time_pre+self.FPS,3)}")
+        cv2.waitKey(int(1000/self.FPS_Display))
 
 
 def setup_cfg(args):
@@ -122,8 +173,9 @@ if __name__ == "__main__":
     elif args.webcam:
         assert args.input is None, "Cannot have both --input and --webcam!"
         assert args.output is None, "output not yet supported with --webcam!"
-        cam = cv2.VideoCapture(0)
-        for vis in tqdm.tqdm(demo.run_on_video(cam, args.confidence_threshold)):
+        src = 'rtmp://rtmp.airobot.eu/live/Mri9wy'
+        cam =  ThreadedCamera(src)
+        for vis in tqdm.tqdm(demo.run_on_video(cam.capture(), args.confidence_threshold)):
             cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
             cv2.imshow(WINDOW_NAME, vis)
             if cv2.waitKey(1) == 27:
