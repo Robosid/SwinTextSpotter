@@ -174,8 +174,9 @@ if __name__ == "__main__":
         assert args.input is None, "Cannot have both --input and --webcam!"
         assert args.output is None, "output not yet supported with --webcam!"
         src = 'rtmp://rtmp.airobot.eu/live/Mri9wy'
-        cam =  ThreadedCamera(src)
-        for vis in tqdm.tqdm(demo.run_on_video(cam.capture, args.confidence_threshold)):
+        #cam =  ThreadedCamera(src)
+        cam = cv2.VideoCapture(src) 
+        for vis in tqdm.tqdm(demo.run_on_video(cam, args.confidence_threshold)):
             cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
             cv2.imshow(WINDOW_NAME, vis)
             if cv2.waitKey(1) == 27:
