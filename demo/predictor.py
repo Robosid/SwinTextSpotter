@@ -72,6 +72,7 @@ class VisualizationDemo(object):
     def _frame_from_video(self, video):
         i = 0
         j = 0
+        video.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         while video.isOpened():
             buffer_time = time.time()
             success, frame = video.read()
