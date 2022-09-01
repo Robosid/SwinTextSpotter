@@ -5,6 +5,7 @@ import multiprocessing as mp
 from collections import deque
 import cv2
 import torch
+import time
 
 from detectron2.data import MetadataCatalog
 from detectron2.engine.defaults import DefaultPredictor
@@ -69,8 +70,17 @@ class VisualizationDemo(object):
         return predictions, vis_output
 
     def _frame_from_video(self, video):
+        i = 0
+        j = 0
         while video.isOpened():
+            buffer_time = time.time()
             success, frame = video.read()
+            self.frame_time_pre = buffer_time
+            self.frame_time_post = time.time()
+            j = i % 30
+            if j == 1:
+                k += 1
+            i += 1
             if success:
                 yield frame
             else:
